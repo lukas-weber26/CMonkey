@@ -130,9 +130,9 @@ void lexer_test_next_token() {
 }
 //end of testing 
 
-int main() {
-	lexer_test_next_token();	
-}
+//int main() {
+//	lexer_test_next_token();	
+//}
 
 void lexer_read_char(lexer * lexer) {
 	if (lexer->read_position >= lexer->input_length){
