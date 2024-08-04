@@ -10,6 +10,10 @@
 //The obvious fix to this problem is to just bring the switch statement from the tokenizer over to this file..
 //Program is valgrind aprooved
 
+//DANGER: THERE IS A CORE DIFFERENCE BETWEEN THIS AND THE BOOK:
+//In short, c strings do not contain EOF characters, hence no EOF character is detected.
+//EOF functionality can therefore not be tested effectively. Use an exernal file and maybe architect this 
+//so that the EOF token is not needed.
 
 typedef struct lexer {
 	char * input; 
@@ -32,6 +36,7 @@ void lexer_skip_whitespace(lexer * lexer);
 char lexer_peek_char(lexer * lexer);
 
 //start of testing 
+#ifdef TEST
 typedef struct test_next_token_struct {
 	int token_type;
 	char * expected_literal;
@@ -50,11 +55,6 @@ void lexer_test_next_token() {
 	"5 < 10 > 5; \n"
 	"true false return if else;\n"
 	"!= ==;\n";
-
-	//DANGER: THERE IS A CORE DIFFERENCE BETWEEN THIS AND THE BOOK:
-	//In short, c strings do not contain EOF characters, hence no EOF character is detected.
-	//EOF functionality can therefore not be tested effectively. Use an exernal file and maybe architect this 
-	//so that the EOF token is not needed.
 
 	#define test_length 57
 	test_next_token_struct tests [test_length] = {
@@ -127,12 +127,15 @@ void lexer_test_next_token() {
 	}
 
 	free_lexer(test_lexer);
+	printf("Testing complete.\n");
 }
+
+int main() {
+	lexer_test_next_token();	
+}
+#endif
 //end of testing 
 
-//int main() {
-//	lexer_test_next_token();	
-//}
 
 void lexer_read_char(lexer * lexer) {
 	if (lexer->read_position >= lexer->input_length){
