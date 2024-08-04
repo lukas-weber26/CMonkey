@@ -5,8 +5,15 @@
 #include <string.h>
 #include <stdlib.h>
 
+//perfomrance improvement idea: Store the lexer input length. strlen is going to be expensive for large files... Done.
+//notice that the origional implementation has one branch less because it does not have an additional switch at the token level
+//The obvious fix to this problem is to just bring the switch statement from the tokenizer over to this file..
+//Program is valgrind aprooved
+
+
 typedef struct lexer {
 	char * input; 
+	int input_length;
 	int position; 
 	int read_position;
 	char current_char;
@@ -22,6 +29,7 @@ token * lexer_next_token(lexer * lexer);
 void free_token(token * token);
 void free_lexer(lexer * lexer);
 void lexer_skip_whitespace(lexer * lexer);
+char lexer_peek_char(lexer * lexer);
 
 //start of testing 
 typedef struct test_next_token_struct {
@@ -39,14 +47,16 @@ void lexer_test_next_token() {
 	"let result = add(five, ten);\n"
 	"\n"
 	"!-/*5;\n"
-	"5 < 10 > 5; \n";
+	"5 < 10 > 5; \n"
+	"true false return if else;\n"
+	"!= ==;\n";
 
 	//DANGER: THERE IS A CORE DIFFERENCE BETWEEN THIS AND THE BOOK:
 	//In short, c strings do not contain EOF characters, hence no EOF character is detected.
 	//EOF functionality can therefore not be tested effectively. Use an exernal file and maybe architect this 
 	//so that the EOF token is not needed.
 
-	#define test_length 36
+	#define test_length 57
 	test_next_token_struct tests [test_length] = {
 		{LET,"let"},
 		{IDENT,"five"},
@@ -84,11 +94,26 @@ void lexer_test_next_token() {
 		{IDENT,"ten"},
 		{RPAREN,")"},
 		{SEMICOLON,";"},
-
+		{BANG,"!"},
+		{MINUS,"-"},
+		{SLASH,"/"},
+		{ASTERISK,"*"},
+		{INT,"5"},
 		{SEMICOLON,";"},
+		{INT,"5"},
+		{LT,"<"},
+		{INT,"10"},
+		{GT,">"},
+		{INT,"5"},
 		{SEMICOLON,";"},
+		{TRUE,"true"},
+		{FALSE,"false"},
+		{RETURN,"return"},
+		{IF,"if"},
+		{ELSE,"else"},
 		{SEMICOLON,";"},
-		{SEMICOLON,";"},
+		{NOT_EQ,"!="},
+		{EQ,"=="},
 		{SEMICOLON,";"},
 	};
 
@@ -110,7 +135,7 @@ int main() {
 }
 
 void lexer_read_char(lexer * lexer) {
-	if (lexer->read_position >= strlen(lexer->input)){
+	if (lexer->read_position >= lexer->input_length){
 		lexer->current_char = '\0';
 	} else {
 		lexer->current_char = lexer->input[lexer->read_position];
@@ -125,6 +150,7 @@ lexer * lexer_create(char * input) {
 	new_lexer->input = strdup(input);
 	assert(strlen(new_lexer->input));
 	new_lexer -> read_position = 0;
+	new_lexer->input_length = strlen(new_lexer->input);
 	lexer_read_char(new_lexer);
 	return new_lexer;
 }
@@ -175,6 +201,20 @@ token * lexer_next_token(lexer * lexer) {
 		new_token->token_string = malloc(sizeof(char) * 2);
 		new_token->token_string[0] = lexer->current_char;
 		new_token->token_string[1] = '\0';
+	} else if (new_token-> token_type == ASSIGN) {
+		char next = lexer_peek_char(lexer);
+		if (next == '=') {
+			new_token->token_type = EQ;
+			lexer_read_char(lexer);
+		}
+		new_token->token_string = strdup(token_token_to_string(new_token->token_type));
+	} else if (new_token->token_type == BANG) {
+		char next = lexer_peek_char(lexer);
+		if (next == '=') {
+			new_token->token_type = NOT_EQ;
+			lexer_read_char(lexer); 
+		}
+		new_token->token_string = strdup(token_token_to_string(new_token->token_type));
 	} else {
 		new_token->token_string = strdup(token_token_to_string(new_token->token_type));
 	}
@@ -182,6 +222,15 @@ token * lexer_next_token(lexer * lexer) {
 	lexer_read_char(lexer); 
 	return new_token;
 }
+
+char lexer_peek_char(lexer * lexer) {
+	if (lexer->position >= lexer->input_length) {
+		return 0;	
+	} else {
+		return lexer->input[lexer->read_position];
+	}
+}
+
 
 void free_token(token * token) {
 	free(token->token_string);

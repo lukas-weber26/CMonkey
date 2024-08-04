@@ -10,7 +10,7 @@ int is_digit(char c);
 char * token_keyword_to_string(int keyword); 
 int token_string_to_keyword(char * keyword); 
 
-enum token_types {ILLEGAL, ENDFILE, IDENT, INT, ASSIGN, PLUS, COMMA, SEMICOLON, LPAREN, RPAREN, LBRACE, RBRACE, FUNCTION, LET, LITTERAL, MINUS, BANG, ASTERISK, SLASH, LT, GT};
+enum token_types {ILLEGAL, ENDFILE, IDENT, INT, ASSIGN, PLUS, COMMA, SEMICOLON, LPAREN, RPAREN, LBRACE, RBRACE, FUNCTION, LET, LITTERAL, MINUS, BANG, ASTERISK, SLASH, LT, GT, TRUE, FALSE, IF, ELSE, RETURN, EQ, NOT_EQ};
 
 typedef struct token {
 	int token_type; 
@@ -32,6 +32,26 @@ int token_string_to_keyword(char * keyword) {
 	
 	if (strcmp(keyword, "let") == 0) {
 		return LET;
+	}	
+	
+	if (strcmp(keyword, "true") == 0) {
+		return TRUE;
+	}	
+	
+	if (strcmp(keyword, "false") == 0) {
+		return FALSE;
+	}	
+	
+	if (strcmp(keyword, "if") == 0) {
+		return IF;
+	}	
+	
+	if (strcmp(keyword, "else") == 0) {
+		return ELSE;
+	}	
+	
+	if (strcmp(keyword, "return") == 0) {
+		return RETURN;
 	}	
 
 	return IDENT;	
@@ -175,6 +195,12 @@ char * token_token_to_string(int token) {
 			break;
 		case SLASH:
 			return "/";
+			break;
+		case EQ:
+			return "==";
+			break;
+		case NOT_EQ:
+			return "!=";
 			break;
 		default:
 			printf("INVALID TOKEN.\n");
