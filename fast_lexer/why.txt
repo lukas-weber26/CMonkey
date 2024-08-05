@@ -1,0 +1,1 @@
+The goal of this directory is to test weather combining part of the tokenizer and lexer could lead to a performance improvement. Unfortunately, it was found that performance decreased by 0.01 instructions per clock.
