@@ -1,8 +1,4 @@
-#include "common_header.h"
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <assert.h>
+#include "common_header.h" 
 
 void ast_program_print(program * program) {
 	for (int i = 0; i < program->node_count; i ++) {
