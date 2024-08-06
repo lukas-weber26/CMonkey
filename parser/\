@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <assert.h>
 
-
 enum ast_node_types {STATEMENT, EXPRESSION};
 enum ast_expression_types {NA};
 enum ast_statement_types {LET_STATEMENT, RETURN_STATEMENT, EXPRESSION_STATEMENT};
@@ -61,6 +60,7 @@ typedef struct parser {
 	token * next_token;
 	error * parse_error;	
 } parser;
+
 ast_node * parser_create_let_statement(token* initial_token, token * secondary_token);
 program * ast_new_program(int expected_length);
 void ast_start_parse(program * program);
@@ -74,8 +74,6 @@ void parser_add_error(parser* parser, char * error_string);
 ast_node * parser_create_return_statement(token* initial_token, token * secondary_token);
 void ast_node_print(ast_node * ast_node);
 void ast_program_print(program * program);
-ast_node * parser_create_expression_statement(token* initial_token, token * secondary_token);
-ast_node * parser_parse_expression_statement(parser * parser);
 
 void ast_program_print(program * program) {
 	for (int i = 0; i < program->node_count; i ++) {
@@ -87,17 +85,16 @@ void ast_node_print(ast_node * ast_node) {
 	if (ast_node->ast_node_type == EXPRESSION) {
 
 	} else {
-		//these prints will need to add support for the actual expressions!
 		ast_statement_node * statement_node = ast_node->node_body;
 		switch (statement_node->ast_statement_type) {
-			case LET_STATEMENT:	
-				printf("%s: %s\n", ast_node->token_litteral->token_string,((ast_let_statement *)(statement_node->statement_body)) -> name->identifier_token->token_string);
-				break;
 			case RETURN_STATEMENT:	
-				printf("%s. \n", ast_node->token_litteral->token_string); //in the end these should probably also take care of their expressions... oh well
+				printf("%s: %s\n", ast_node->token_litteral->token_string,((ast_return_statement *)(statement_node->statement_body)) ->value->token_litteral->token_string);
+				break;
+			case LET_STATEMENT:	
+				printf("%s: \n", ast_node->token_litteral->token_string); //in the end these should probably also take care of their expressions... oh well
 				break;
 			case EXPRESSION_STATEMENT:
-				printf("%s. \n", ast_node->token_litteral->token_string); //in the end these should probably also take care of their expressions... oh well
+				printf("%s: \n", ast_node->token_litteral->token_string); //in the end these should probably also take care of their expressions... oh well
 				break;
 			default:
 				break;
@@ -137,6 +134,81 @@ void check_parse_errors(parser * parser) {
 		}
 		exit(0);
 	}
+}
+
+void ast_parser_test_let_statements() {
+	char * input = "let x = 5;\n"
+	"let y = 10;\n"
+	"let foobar = 838383;\n";
+	
+	parser * test_parser = parser_new_parser(input);
+	program * test_program = ast_parse_program(test_parser); 
+	check_parse_errors(test_parser);
+
+	#define TEST_LENGTH 3 
+
+	assert(test_program != NULL);
+	assert(test_program->node_count == TEST_LENGTH);
+
+	printf("Test program print:\n");
+	ast_program_print(test_program);
+
+	char * test_strings [TEST_LENGTH] = {"x","y","foobar"};
+
+	for (int i = 0; i < TEST_LENGTH; i++) {
+		ast_node * current_node = test_program->nodes[i];
+		assert(strcmp(current_node->token_litteral->token_string,"let") == 0);
+		assert(current_node->token_litteral->token_type == LET);
+		assert(current_node->ast_node_type == STATEMENT);
+		assert(current_node->node_body != NULL);
+		
+		ast_statement_node * current_statement = current_node->node_body;
+
+		assert(current_statement->ast_statement_type == LET_STATEMENT);
+		assert(current_statement->statement_body != NULL);
+
+		ast_let_statement * current_let_statement = current_statement->statement_body;
+
+		assert(strcmp(current_let_statement->name->identifier_token->token_string,test_strings[i]) == 0 );
+		assert(current_let_statement->name->identifier_token->token_type == IDENT);
+
+	}
+
+
+}
+
+void ast_parser_test_return_statements() {
+	char * input = "return 5;\n"
+	"return 10;\n"
+	"return add(15);\n";
+	
+	parser * test_parser = parser_new_parser(input);
+	program * test_program = ast_parse_program(test_parser); 
+	check_parse_errors(test_parser);
+
+	#define TEST_LENGTH 3 
+
+	assert(test_program != NULL);
+	assert(test_program->node_count == TEST_LENGTH);
+
+	for (int i = 0; i < TEST_LENGTH; i++) {
+		ast_node * current_node = test_program->nodes[i];
+		assert(strcmp(current_node->token_litteral->token_string,"return") == 0);
+		assert(current_node->token_litteral->token_type == RETURN);
+		assert(current_node->ast_node_type == STATEMENT);
+		assert(current_node->node_body != NULL);
+		
+		ast_statement_node * current_statement = current_node->node_body;
+
+		assert(current_statement->ast_statement_type == RETURN_STATEMENT);
+		assert(current_statement->statement_body != NULL);
+
+		ast_return_statement * current_return_statement =current_statement->statement_body;
+
+		assert(current_return_statement->value==NULL);
+
+	}
+
 }
 
 program * ast_new_program(int expected_length) {
@@ -237,21 +309,6 @@ ast_node * parser_create_return_statement(token* initial_token, token * secondar
 	return new_node;
 }
 
-ast_node * parser_create_expression_statement(token* initial_token, token * secondary_token) {
-	ast_node * new_node = malloc(sizeof(ast_node));
-	ast_statement_node * new_statement  = malloc(sizeof(ast_statement_node));
-	ast_expression_statement* new_expression_statement = malloc(sizeof(ast_expression_statement));
-
-	new_node->ast_node_type = STATEMENT;
-	new_node->token_litteral= initial_token; 
-	new_node->node_body = new_statement;
-	new_statement->ast_statement_type = EXPRESSION_STATEMENT;
-	new_statement->statement_body = new_statement; 
-	new_expression_statement->value = NULL;
-	
-	return new_node;
-}
-
 ast_node * parser_parse_let_statement(parser * parser) {
 
 	token * initial_token = copy_token(parser->current_token);
@@ -287,19 +344,6 @@ ast_node * parser_parse_return_statement(parser * parser) {
 	return new_node;	
 }
 
-ast_node * parser_parse_expression_statement(parser * parser) {
-
-	token * initial_token = copy_token(parser->current_token);
-	parser_next_token(parser);
-
-	while (!parser_current_token_is(parser, SEMICOLON)) {
-		parser_next_token(parser);	
-	}
-
-	ast_node * new_node = parser_create_expression_statement(initial_token, NULL);
-	return new_node;	
-}
-
 ast_node * parser_parse_statement(parser * parser) {
 	switch (parser->current_token->token_type) {
 		case LET:		
@@ -307,7 +351,7 @@ ast_node * parser_parse_statement(parser * parser) {
 		case RETURN:
 			return parser_parse_return_statement(parser);
 		default: 
-			return parser_parse_expression_statement(parser);
+			return NULL;
 	}
 }
 
@@ -341,81 +385,8 @@ program * ast_parse_program (parser * parser) {
 }
 	
 int main() {
-	//ast_parser_test_let_statements();
-	//ast_parser_test_return_statements(); 
-	//printf("Tests passed!\n");
+	ast_parser_test_let_statements();
+	ast_parser_test_return_statements();
+	printf("Tests passed!\n");
 }
 
-
-void ast_parser_test_let_statements() {
-	char * input = "let x = 5;\n"
-	"let y = 10;\n"
-	"let foobar = 838383;\n";
-	
-	parser * test_parser = parser_new_parser(input);
-	program * test_program = ast_parse_program(test_parser); 
-	check_parse_errors(test_parser);
-
-	#define TEST_LENGTH 3 
-
-	assert(test_program != NULL);
-	assert(test_program->node_count == TEST_LENGTH);
-
-	printf("Test program print:\n");
-	ast_program_print(test_program);
-
-	char * test_strings [TEST_LENGTH] = {"x","y","foobar"};
-
-	for (int i = 0; i < TEST_LENGTH; i++) {
-		ast_node * current_node = test_program->nodes[i];
-		assert(strcmp(current_node->token_litteral->token_string,"let") == 0);
-		assert(current_node->token_litteral->token_type == LET);
-		assert(current_node->ast_node_type == STATEMENT);
-		assert(current_node->node_body != NULL);
-		
-		ast_statement_node * current_statement = current_node->node_body;
-
-		assert(current_statement->ast_statement_type == LET_STATEMENT);
-		assert(current_statement->statement_body != NULL);
-
-		ast_let_statement * current_let_statement = current_statement->statement_body;
-
-		assert(strcmp(current_let_statement->name->identifier_token->token_string,test_strings[i]) == 0 );
-		assert(current_let_statement->name->identifier_token->token_type == IDENT);
-
-	}
-}
-
-void ast_parser_test_return_statements() {
-	char * input = "return 5;\n"
-	"return 10;\n"
-	"return add(15);\n";
-	
-	parser * test_parser = parser_new_parser(input);
-	program * test_program = ast_parse_program(test_parser); 
-	check_parse_errors(test_parser);
-
-	#define TEST_LENGTH 3 
-
-	assert(test_program != NULL);
-	assert(test_program->node_count == TEST_LENGTH);
-
-	for (int i = 0; i < TEST_LENGTH; i++) {
-		ast_node * current_node = test_program->nodes[i];
-		assert(strcmp(current_node->token_litteral->token_string,"return") == 0);
-		assert(current_node->token_litteral->token_type == RETURN);
-		assert(current_node->ast_node_type == STATEMENT);
-		assert(current_node->node_body != NULL);
-		
-		ast_statement_node * current_statement = current_node->node_body;
-
-		assert(current_statement->ast_statement_type == RETURN_STATEMENT);
-		assert(current_statement->statement_body != NULL);
-
-		ast_return_statement * current_return_statement =current_statement->statement_body;
-
-		assert(current_return_statement->value==NULL);
-
-	}
-
-}
